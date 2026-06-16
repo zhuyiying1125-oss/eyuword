@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>俄语单词无限闯关小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #4158D0, #C850C0);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .game-box {
+            background: #fff;
+            color: #333;
+            width: 100%;
+            max-width: 500px;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .score {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .rus-word {
+            font-size: 42px;
+            font-weight: bold;
+            color: #4158D0;
+            margin: 30px 0;
+            min-height: 60px;
+        }
+
+        .option-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .option-btn {
+            padding: 16px 0;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            background: #f8f9fa;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option-btn:hover {
+            border-color: #4158D0;
+            background: #f0f4ff;
+        }
+
+        .correct {
+            background: #e8f5e9 !important;
+            border-color: #52c41a !important;
+            color: #237804;
+        }
+
+        .error {
+            background: #fff2f0 !important;
+            border-color: #ff4d4f !important;
+            color: #a8071a;
+        }
+
+        .tip-text {
+            margin-top: 20px;
+            font-size: 16px;
+            height: 24px;
+        }
+
+        .operate-btn {
+            margin-top: 25px;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #4158D0, #C850C0);
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: opacity 0.3s;
+            margin: 0 8px;
+        }
+
+        .operate-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-box">
+        <div class="score">当前积分：<span id="scoreNum">0</span></div>
+        <div class="rus-word" id="rusWord"></div>
+        <div class="option-list" id="optionList"></div>
+        <div class="tip-text" id="tipText"></div>
+        <div class="btn-group">
+            <button class="operate-btn" id="nextBtn" style="display:none">下一题</button>
+            <button class="operate-btn" id="resetBtn">重新闯关</button>
+        </div>
+    </div>
+
+    <script>
+        // 俄语词汇库，可自由新增单词
+        const wordList = [
+            { rus: "привет", zh: "你好" },
+            { rus: "спасибо", zh: "谢谢" },
+            { rus: "до свидания", zh: "再见" },
+            { rus: "да", zh: "是的" },
+            { rus: "нет", zh: "不是" },
+            { rus: "вода", zh: "水" },
+            { rus: "хлеб", zh: "面包" },
+            { rus: "молоко", zh: "牛奶" },
+            { rus: "дом", zh: "房子" },
+            { rus: "книга", zh: "书本" },
+            { rus: "друг", zh: "朋友" },
+            { rus: "семья", zh: "家庭" },
+            { rus: "утро", zh: "早上" },
+            { rus: "вечер", zh: "晚上" },
+            { rus: "день", zh: "白天" },
+            { rus: "ночь", zh: "夜晚" },
+            { rus: "солнце", zh: "太阳" },
+            { rus: "луна", zh: "月亮" },
+            { rus: "цветок", zh: "花朵" },
+            { rus: "животное", zh: "动物" }
+        ];
+
+        // 全局游戏变量
+        let score = 0;
+        let currentWord = null;
+        let answered = false;
+
+        // DOM元素获取
+        const scoreNum = document.getElementById("scoreNum");
+        const rusWord = document.getElementById("rusWord");
+        const optionList = document.getElementById("optionList");
+        const tipText = document.getElementById("tipText");
+        const nextBtn = document.getElementById("nextBtn");
+        const resetBtn = document.getElementById("resetBtn");
+
+        // 初始化游戏
+        function initGame() {
+            answered = false;
+            tipText.innerText = "";
+            nextBtn.style.display = "none";
+            createRandomQuestion();
+        }
+
+        // 随机生成题目
+        function createRandomQuestion() {
+            // 随机选取正确单词
+            const randomIdx = Math.floor(Math.random() * wordList.length);
+            currentWord = wordList[randomIdx];
+
+            // 生成3个不重复错误选项
+            const wrongAns = [];
+            while (wrongAns.length < 3) {
+                const randomWord = wordList[Math.floor(Math.random() * wordList.length)];
+                if (randomWord.zh !== currentWord.zh && !wrongAns.includes(randomWord.zh)) {
+                    wrongAns.push(randomWord.zh);
+                }
+            }
+
+            // 合并+打乱选项顺序
+            const allOptions = [...wrongAns, currentWord.zh];
+            shuffleArr(allOptions);
+
+            // 渲染单词和选项
+            rusWord.innerText = currentWord.rus;
+            renderOptions(allOptions);
+        }
+
+        // 渲染四个答案按钮
+        function renderOptions(options) {
+            optionList.innerHTML = "";
+            options.forEach(text => {
+                const btn = document.createElement("button");
+                btn.className = "option-btn";
+                btn.innerText = text;
+                btn.onclick = () => checkAnswer(text, btn);
+                optionList.appendChild(btn);
+            });
+        }
+
+        // 判断答案对错
+        function checkAnswer(selectText, clickBtn) {
+            if (answered) return;
+            answered = true;
+
+            // 全部按钮禁止点击
+            const allBtns = document.querySelectorAll(".option-btn");
+            allBtns.forEach(btn => btn.style.pointerEvents = "none");
+
+            if (selectText === currentWord.zh) {
+                clickBtn.classList.add("correct");
+                tipText.innerText = "✅ 答对啦！积分+1";
+                score++;
+                scoreNum.innerText = score;
+            } else {
+                clickBtn.classList.add("error");
+                // 标出正确答案
+                allBtns.forEach(btn => {
+                    if (btn.innerText === currentWord.zh) btn.classList.add("correct");
+                });
+                tipText.innerText = `❌ 答错了，正确释义：${currentWord.zh}`;
+            }
+            nextBtn.style.display = "inline-block";
+        }
+
+        // 数组随机打乱工具函数
+        function shuffleArr(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
+
+        // 切换下一题
+        nextBtn.onclick = initGame;
+
+        // 重置游戏分数
+        resetBtn.onclick = () => {
+            score = 0;
+            scoreNum.innerText = "0";
+            initGame();
+        };
+
+        // 页面加载自动启动游戏
+        window.onload = initGame;
+    </script>
+</body>
+</html>
